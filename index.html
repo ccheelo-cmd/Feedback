@@ -862,7 +862,7 @@
       <div class="row"><span>From</span><b>${review.name}</b></div>
       <div class="row"><span>Recommendation</span><b>${n} / 10 · ${bucket}</b></div>
       <div class="row"><span>Cohort</span><b>Analysts of Arcadius (C4)</b></div>
-      <div class="row"><span>Submitted</span><b>${new Date().toLocaleDateString()}</b></div>
+      <div class="row"><span>${updated ? 'Updated' : 'Submitted'}</span><b>${new Date().toLocaleDateString()}</b></div>
     `;
     document.getElementById('formView').style.display = 'none';
     document.getElementById('thanksView').style.display = 'block';
