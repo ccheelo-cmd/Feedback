@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Program Review — Analysts of Arcadius (C4)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5f2ec;
+    --card:#ffffff;
+    --ink:#23272d;
+    --ink-soft:#4c525a;
+    --muted:#7e838c;
+    --muted-2:#9aa0a8;
+    --line:#e8e2d6;
+    --line-strong:#dcd4c5;
+    --field:#fbfaf7;
+    --accent:#0f6b5f;
+    --accent-deep:#0a5246;
+    --accent-tint:#e8f1ef;
+    --gold:#b2862e;
+    --err:#b1432c;
+    --radius:12px;
+    --maxw:740px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Hanken Grotesk",system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    padding:46px 20px 80px;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(1100px 700px at 50% -200px, rgba(15,107,95,.06), transparent 70%);
+  }
+
+  .shell{position:relative;z-index:1;max-width:var(--maxw);margin:0 auto}
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:18px;
+    box-shadow:0 1px 2px rgba(35,39,45,.03), 0 24px 60px -34px rgba(35,39,45,.22);
+    overflow:hidden;
+    opacity:0;transform:translateY(14px);
+    animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards;
+  }
+  @keyframes rise{to{opacity:1;transform:none}}
+
+  header{
+    padding:42px 44px 34px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, #fcfbf8, #ffffff);
+    position:relative;
+  }
+  header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;
+    background:linear-gradient(90deg, var(--accent), var(--gold) 70%, transparent)}
+  .badge{
+    display:inline-flex;align-items:center;gap:9px;
+    font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--accent-deep);background:var(--accent-tint);
+    border:1px solid #cfe4df;border-radius:99px;padding:6px 13px;
+  }
+  .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+  h1{
+    font-family:"Fraunces",serif;font-weight:600;
+    font-size:clamp(28px,4.6vw,42px);line-height:1.04;letter-spacing:-.01em;
+    margin:18px 0 12px;color:var(--ink);
+  }
+  .lede{color:var(--ink-soft);max-width:60ch;font-size:16px}
+  .meta{margin-top:20px;display:flex;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--muted)}
+  .meta span{border:1px solid var(--line-strong);border-radius:7px;padding:5px 10px;background:#fff}
+  .meta b{color:var(--ink);font-weight:600}
+
+  .body{padding:8px 44px 8px}
+  @media(max-width:560px){
+    header{padding:32px 22px 28px}
+    .body{padding:4px 22px}
+  }
+
+  .section{padding:34px 0;border-bottom:1px solid var(--line)}
+  .section:last-of-type{border-bottom:none}
+  .sec-head{margin-bottom:24px}
+  .sec-kicker{
+    font-size:11.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);display:flex;align-items:center;gap:9px;margin-bottom:9px;
+  }
+  .sec-kicker .n{
+    font-variant-numeric:tabular-nums;color:var(--gold);
+    border:1px solid var(--line-strong);border-radius:6px;padding:2px 7px;letter-spacing:.05em;
+  }
+  .sec-title{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(20px,3vw,25px);letter-spacing:-.01em;line-height:1.15}
+  .sec-sub{color:var(--muted);font-size:14px;margin-top:4px}
+
+  .field{margin-bottom:26px}
+  .field:last-child{margin-bottom:0}
+  .q{display:block;font-size:15.5px;font-weight:600;color:var(--ink);margin-bottom:11px}
+  .q .req{color:var(--err);margin-left:3px;font-weight:700}
+  .hint{display:block;font-size:13px;color:var(--muted);font-weight:400;margin-top:3px}
+
+  input[type=text],input[type=email],select,textarea{
+    width:100%;background:var(--field);color:var(--ink);
+    border:1px solid var(--line-strong);border-radius:10px;
+    padding:12px 13px;font-family:inherit;font-size:15px;transition:.16s;
+  }
+  textarea{resize:vertical;min-height:88px;line-height:1.5}
+  select{appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237e838c' stroke-width='2.5'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 13px center;padding-right:38px;}
+  input::placeholder,textarea::placeholder{color:var(--muted-2)}
+  input:focus,select:focus,textarea:focus{
+    outline:none;border-color:var(--accent);background:#fff;
+    box-shadow:0 0 0 3px rgba(15,107,95,.12);
+  }
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+  @media(max-width:560px){.grid-2{grid-template-columns:1fr}}
+
+  .scale{display:flex;gap:7px}
+  .scale input{position:absolute;opacity:0;pointer-events:none}
+  .scale label{
+    flex:1;text-align:center;cursor:pointer;user-select:none;
+    border:1px solid var(--line-strong);border-radius:10px;background:#fff;
+    padding:12px 0;font-size:15px;font-weight:600;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;transition:.15s;
+  }
+  .scale label:hover{border-color:var(--accent);color:var(--accent-deep)}
+  .scale input:checked+label{background:var(--accent);border-color:var(--accent);color:#fff;
+    box-shadow:0 6px 16px -8px rgba(15,107,95,.6)}
+  .scale input:focus-visible+label{box-shadow:0 0 0 3px rgba(15,107,95,.28)}
+  .ends{display:flex;justify-content:space-between;margin-top:7px;font-size:12px;color:var(--muted)}
+
+  .seg{display:flex;flex-wrap:wrap;gap:7px}
+  .seg input{position:absolute;opacity:0;pointer-events:none}
+  .seg label{
+    cursor:pointer;user-select:none;border:1px solid var(--line-strong);background:#fff;
+    border-radius:99px;padding:9px 15px;font-size:14px;color:var(--ink-soft);transition:.15s;
+  }
+  .seg label:hover{border-color:var(--accent);color:var(--accent-deep)}
+  .seg input:checked+label{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .seg input:focus-visible+label{box-shadow:0 0 0 3px rgba(15,107,95,.28)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chips input{position:absolute;opacity:0;pointer-events:none}
+  .chips label{
+    cursor:pointer;user-select:none;border:1px solid var(--line-strong);background:#fff;
+    border-radius:9px;padding:9px 13px;font-size:14px;color:var(--ink-soft);
+    display:flex;align-items:center;gap:8px;transition:.15s;
+  }
+  .chips label::before{content:"";width:13px;height:13px;border-radius:4px;
+    border:1.5px solid var(--muted-2);transition:.15s;flex-shrink:0}
+  .chips label:hover{border-color:var(--accent);color:var(--accent-deep)}
+  .chips input:checked+label{color:var(--accent-deep);border-color:var(--accent);background:var(--accent-tint)}
+  .chips input:checked+label::before{background:var(--accent);border-color:var(--accent);
+    box-shadow:inset 0 0 0 2px #fff}
+  .chips input:focus-visible+label{box-shadow:0 0 0 3px rgba(15,107,95,.24)}
+
+  .nps{display:grid;grid-template-columns:repeat(11,1fr);gap:5px}
+  @media(max-width:560px){.nps{grid-template-columns:repeat(6,1fr)}}
+  .nps input{position:absolute;opacity:0;pointer-events:none}
+  .nps label{cursor:pointer;text-align:center;border:1px solid var(--line-strong);background:#fff;
+    border-radius:9px;padding:12px 0;font-size:14.5px;font-weight:600;color:var(--ink-soft);
+    font-variant-numeric:tabular-nums;transition:.15s}
+  .nps label:hover{border-color:var(--accent);color:var(--accent-deep)}
+  .nps input:checked+label{background:var(--accent);border-color:var(--accent);color:#fff}
+  .nps input:focus-visible+label{box-shadow:0 0 0 3px rgba(15,107,95,.28)}
+
+  .footer{padding:30px 44px 40px}
+  @media(max-width:560px){.footer{padding:24px 22px 32px}}
+  .submit{
+    width:100%;border:none;cursor:pointer;
+    font-family:"Hanken Grotesk",sans-serif;font-weight:700;font-size:16.5px;
+    background:var(--accent);color:#fff;padding:16px;border-radius:11px;transition:.16s;
+    display:flex;align-items:center;justify-content:center;gap:9px;
+  }
+  .submit:hover{background:var(--accent-deep);transform:translateY(-1px);box-shadow:0 12px 26px -12px rgba(15,107,95,.6)}
+  .submit:active{transform:translateY(0)}
+  .submit svg{width:18px;height:18px}
+  .note{text-align:center;color:var(--muted);font-size:12.5px;margin-top:13px}
+  .err{display:none;color:var(--err);font-size:13.5px;text-align:center;margin-top:11px;font-weight:600}
+
+  .thanks{display:none;text-align:center;padding:70px 30px}
+  .thanks .mark{width:66px;height:66px;border-radius:50%;margin:0 auto 24px;
+    background:var(--accent-tint);border:1px solid #cfe4df;display:grid;place-items:center}
+  .thanks .mark svg{width:30px;height:30px;stroke:var(--accent)}
+  .thanks h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(26px,5vw,38px);letter-spacing:-.01em}
+  .thanks p{color:var(--ink-soft);margin:14px auto 0;max-width:46ch;font-size:15.5px}
+  .recap{margin:30px auto 0;max-width:400px;text-align:left;border:1px solid var(--line);
+    border-radius:12px;background:var(--field);padding:20px 22px}
+  .recap .row{display:flex;justify-content:space-between;font-size:13.5px;padding:7px 0;color:var(--muted);border-bottom:1px solid var(--line)}
+  .recap .row:last-child{border-bottom:none}
+  .recap .row b{color:var(--accent-deep);font-weight:700}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="card" id="formView">
+    <header>
+      <span class="badge"><span class="dot"></span>Analysts of Arcadius &middot; Cohort C4</span>
+      <h1>End-of-Cohort Program Review</h1>
+      <p class="lede">Your honest assessment goes directly to the supervisors and program leads. The purpose is simple: tell us what's working, what isn't, and where the program should improve for the cohorts that follow.</p>
+      <div class="meta">
+        <span><b>~6 min</b> to complete</span>
+        <span>Goes to <b>supervisors &amp; program leads</b></span>
+        <span>Final review</span>
+      </div>
+    </header>
+
+    <form id="reviewForm" novalidate>
+      <div class="body">
+
+        <!-- 00 — RESPONDENT -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">00</span> Your details</div>
+            <div class="sec-title">Before we begin</div>
+            <div class="sec-sub">Reviews on this form are attributed, so supervisors can follow up if useful.</div>
+          </div>
+          <div class="grid-2">
+            <div class="field" style="margin-bottom:0">
+              <label class="q" for="name">Full name <span class="req">*</span></label>
+              <input type="text" id="name" name="name" placeholder="Your full name" autocomplete="name">
+            </div>
+            <div class="field" style="margin-bottom:0">
+              <label class="q" for="email">Email <span class="hint" style="display:inline">(optional)</span></label>
+              <input type="email" id="email" name="email" placeholder="you@email.com" autocomplete="email">
+            </div>
+          </div>
+        </section>
+
+        <!-- 01 — EXPECTATIONS -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">01</span> Expectations</div>
+            <div class="sec-title">Did the program deliver what it set out to?</div>
+          </div>
+
+          <div class="field">
+            <label class="q">The program met the expectations I had when I joined.</label>
+            <div class="scale" role="radiogroup" aria-label="Met expectations, 1 to 5">
+              <input type="radio" id="ex1" name="metExpectations" value="1"><label for="ex1">1</label>
+              <input type="radio" id="ex2" name="metExpectations" value="2"><label for="ex2">2</label>
+              <input type="radio" id="ex3" name="metExpectations" value="3"><label for="ex3">3</label>
+              <input type="radio" id="ex4" name="metExpectations" value="4"><label for="ex4">4</label>
+              <input type="radio" id="ex5" name="metExpectations" value="5"><label for="ex5">5</label>
+            </div>
+            <div class="ends"><span>Strongly disagree</span><span>Strongly agree</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Goals, structure, and expectations were communicated clearly throughout.</label>
+            <div class="scale" role="radiogroup" aria-label="Clear communication, 1 to 5">
+              <input type="radio" id="cc1" name="clearComms" value="1"><label for="cc1">1</label>
+              <input type="radio" id="cc2" name="clearComms" value="2"><label for="cc2">2</label>
+              <input type="radio" id="cc3" name="clearComms" value="3"><label for="cc3">3</label>
+              <input type="radio" id="cc4" name="clearComms" value="4"><label for="cc4">4</label>
+              <input type="radio" id="cc5" name="clearComms" value="5"><label for="cc5">5</label>
+            </div>
+            <div class="ends"><span>Unclear</span><span>Very clear</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">How did the day-to-day reality compare to what was promised?</label>
+            <div class="seg" role="radiogroup" aria-label="Reality vs promise">
+              <input type="radio" id="rp1" name="realityVsPromise" value="Far below"><label for="rp1">Far below</label>
+              <input type="radio" id="rp2" name="realityVsPromise" value="Below"><label for="rp2">Below</label>
+              <input type="radio" id="rp3" name="realityVsPromise" value="As expected"><label for="rp3">As expected</label>
+              <input type="radio" id="rp4" name="realityVsPromise" value="Above"><label for="rp4">Above</label>
+              <input type="radio" id="rp5" name="realityVsPromise" value="Far above"><label for="rp5">Far above</label>
+            </div>
+          </div>
+        </section>
+
+        <!-- 02 — CURRICULUM -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">02</span> Curriculum &amp; content</div>
+            <div class="sec-title">The material and how it was structured</div>
+          </div>
+
+          <div class="field">
+            <label class="q">Overall quality and depth of the curriculum</label>
+            <div class="scale" role="radiogroup" aria-label="Curriculum quality, 1 to 5">
+              <input type="radio" id="cq1" name="curriculum" value="1"><label for="cq1">1</label>
+              <input type="radio" id="cq2" name="curriculum" value="2"><label for="cq2">2</label>
+              <input type="radio" id="cq3" name="curriculum" value="3"><label for="cq3">3</label>
+              <input type="radio" id="cq4" name="curriculum" value="4"><label for="cq4">4</label>
+              <input type="radio" id="cq5" name="curriculum" value="5"><label for="cq5">5</label>
+            </div>
+            <div class="ends"><span>Poor</span><span>Excellent</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">The pace of the program was…</label>
+            <div class="seg" role="radiogroup" aria-label="Pace">
+              <input type="radio" id="pc1" name="pace" value="Too slow"><label for="pc1">Too slow</label>
+              <input type="radio" id="pc2" name="pace" value="A bit slow"><label for="pc2">A bit slow</label>
+              <input type="radio" id="pc3" name="pace" value="Just right"><label for="pc3">Just right</label>
+              <input type="radio" id="pc4" name="pace" value="A bit fast"><label for="pc4">A bit fast</label>
+              <input type="radio" id="pc5" name="pace" value="Too fast"><label for="pc5">Too fast</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="q">Balance of theory vs hands-on practice</label>
+            <div class="seg" role="radiogroup" aria-label="Theory vs practice">
+              <input type="radio" id="tp1" name="balance" value="Too theoretical"><label for="tp1">Too theoretical</label>
+              <input type="radio" id="tp2" name="balance" value="Slightly theoretical"><label for="tp2">Slightly theoretical</label>
+              <input type="radio" id="tp3" name="balance" value="Well balanced"><label for="tp3">Well balanced</label>
+              <input type="radio" id="tp4" name="balance" value="Slightly hands-on heavy"><label for="tp4">Slightly hands-on heavy</label>
+              <input type="radio" id="tp5" name="balance" value="Too hands-on heavy"><label for="tp5">Too hands-on heavy</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="q">Which topics needed more depth?
+              <span class="hint">Select all that apply — this directly shapes the next syllabus.</span></label>
+            <div class="chips">
+              <input type="checkbox" id="d1" name="needMoreDepth" value="SQL"><label for="d1">SQL</label>
+              <input type="checkbox" id="d2" name="needMoreDepth" value="Python"><label for="d2">Python</label>
+              <input type="checkbox" id="d3" name="needMoreDepth" value="Statistics"><label for="d3">Statistics</label>
+              <input type="checkbox" id="d4" name="needMoreDepth" value="Data visualization"><label for="d4">Data visualization</label>
+              <input type="checkbox" id="d5" name="needMoreDepth" value="Dashboards / BI"><label for="d5">Dashboards / BI</label>
+              <input type="checkbox" id="d6" name="needMoreDepth" value="Data cleaning"><label for="d6">Data cleaning</label>
+              <input type="checkbox" id="d7" name="needMoreDepth" value="Machine learning"><label for="d7">Machine learning</label>
+              <input type="checkbox" id="d8" name="needMoreDepth" value="Storytelling"><label for="d8">Communication / storytelling</label>
+            </div>
+          </div>
+        </section>
+
+        <!-- 03 — SUPERVISORS -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">03</span> Supervisors &amp; program leads</div>
+            <div class="sec-title">The people running the cohort</div>
+            <div class="sec-sub">Rate the supervision and guidance you received across C4.</div>
+          </div>
+
+          <div class="field">
+            <label class="q">Knowledge and expertise of the supervisors</label>
+            <div class="scale" role="radiogroup" aria-label="Supervisor expertise, 1 to 5">
+              <input type="radio" id="sk1" name="supExpertise" value="1"><label for="sk1">1</label>
+              <input type="radio" id="sk2" name="supExpertise" value="2"><label for="sk2">2</label>
+              <input type="radio" id="sk3" name="supExpertise" value="3"><label for="sk3">3</label>
+              <input type="radio" id="sk4" name="supExpertise" value="4"><label for="sk4">4</label>
+              <input type="radio" id="sk5" name="supExpertise" value="5"><label for="sk5">5</label>
+            </div>
+            <div class="ends"><span>Poor</span><span>Excellent</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Clarity of guidance and instruction</label>
+            <div class="scale" role="radiogroup" aria-label="Guidance clarity, 1 to 5">
+              <input type="radio" id="gc1" name="guidance" value="1"><label for="gc1">1</label>
+              <input type="radio" id="gc2" name="guidance" value="2"><label for="gc2">2</label>
+              <input type="radio" id="gc3" name="guidance" value="3"><label for="gc3">3</label>
+              <input type="radio" id="gc4" name="guidance" value="4"><label for="gc4">4</label>
+              <input type="radio" id="gc5" name="guidance" value="5"><label for="gc5">5</label>
+            </div>
+            <div class="ends"><span>Confusing</span><span>Crystal clear</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Responsiveness and availability when you needed help</label>
+            <div class="scale" role="radiogroup" aria-label="Responsiveness, 1 to 5">
+              <input type="radio" id="rs1" name="responsiveness" value="1"><label for="rs1">1</label>
+              <input type="radio" id="rs2" name="responsiveness" value="2"><label for="rs2">2</label>
+              <input type="radio" id="rs3" name="responsiveness" value="3"><label for="rs3">3</label>
+              <input type="radio" id="rs4" name="responsiveness" value="4"><label for="rs4">4</label>
+              <input type="radio" id="rs5" name="responsiveness" value="5"><label for="rs5">5</label>
+            </div>
+            <div class="ends"><span>Hard to reach</span><span>Always available</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Quality and usefulness of feedback on your work</label>
+            <div class="scale" role="radiogroup" aria-label="Feedback quality, 1 to 5">
+              <input type="radio" id="fb1" name="feedbackQuality" value="1"><label for="fb1">1</label>
+              <input type="radio" id="fb2" name="feedbackQuality" value="2"><label for="fb2">2</label>
+              <input type="radio" id="fb3" name="feedbackQuality" value="3"><label for="fb3">3</label>
+              <input type="radio" id="fb4" name="feedbackQuality" value="4"><label for="fb4">4</label>
+              <input type="radio" id="fb5" name="feedbackQuality" value="5"><label for="fb5">5</label>
+            </div>
+            <div class="ends"><span>Not useful</span><span>Very useful</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Fairness, respect, and professionalism</label>
+            <div class="scale" role="radiogroup" aria-label="Professionalism, 1 to 5">
+              <input type="radio" id="pf1" name="professionalism" value="1"><label for="pf1">1</label>
+              <input type="radio" id="pf2" name="professionalism" value="2"><label for="pf2">2</label>
+              <input type="radio" id="pf3" name="professionalism" value="3"><label for="pf3">3</label>
+              <input type="radio" id="pf4" name="professionalism" value="4"><label for="pf4">4</label>
+              <input type="radio" id="pf5" name="professionalism" value="5"><label for="pf5">5</label>
+            </div>
+            <div class="ends"><span>Poor</span><span>Exemplary</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q" for="supKeep">What should the supervisors keep doing?</label>
+            <textarea id="supKeep" name="supKeep" placeholder="Practices and habits that genuinely helped the cohort…"></textarea>
+          </div>
+
+          <div class="field">
+            <label class="q" for="supChange">What should the supervisors do differently?</label>
+            <textarea id="supChange" name="supChange" placeholder="Be specific and constructive — this is the most useful part for them…"></textarea>
+          </div>
+        </section>
+
+        <!-- 04 — TOOLS & PLATFORM -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">04</span> Tools &amp; platform</div>
+            <div class="sec-title">The stack and the learning environment</div>
+          </div>
+
+          <div class="field">
+            <label class="q">Which tools do you feel confident using now?
+              <span class="hint">Select all that apply.</span></label>
+            <div class="chips">
+              <input type="checkbox" id="cf1" name="confidentTools" value="Excel / Sheets"><label for="cf1">Excel / Sheets</label>
+              <input type="checkbox" id="cf2" name="confidentTools" value="SQL"><label for="cf2">SQL</label>
+              <input type="checkbox" id="cf3" name="confidentTools" value="Python / Pandas"><label for="cf3">Python / Pandas</label>
+              <input type="checkbox" id="cf4" name="confidentTools" value="Power BI"><label for="cf4">Power BI</label>
+              <input type="checkbox" id="cf5" name="confidentTools" value="Git / GitHub"><label for="cf5">Git / GitHub</label>
+              <input type="checkbox" id="cf6" name="confidentTools" value="VS Code"><label for="cf6">VS Code</label>
+              <input type="checkbox" id="cf7" name="confidentTools" value="Antigravity IDE"><label for="cf7">Antigravity IDE</label>
+              <input type="checkbox" id="cf8" name="confidentTools" value="Claude AI / Code"><label for="cf8">Claude AI / Code</label>
+              <input type="checkbox" id="cf9" name="confidentTools" value="Cloud / warehouses"><label for="cf9">Cloud / warehouses</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="q">Which tools needed better instruction?
+              <span class="hint">Select all that apply.</span></label>
+            <div class="chips">
+              <input type="checkbox" id="bi1" name="toolsNeedWork" value="Excel / Sheets"><label for="bi1">Excel / Sheets</label>
+              <input type="checkbox" id="bi2" name="toolsNeedWork" value="SQL"><label for="bi2">SQL</label>
+              <input type="checkbox" id="bi3" name="toolsNeedWork" value="Python / Pandas"><label for="bi3">Python / Pandas</label>
+              <input type="checkbox" id="bi4" name="toolsNeedWork" value="Power BI"><label for="bi4">Power BI</label>
+              <input type="checkbox" id="bi5" name="toolsNeedWork" value="Git / GitHub"><label for="bi5">Git / GitHub</label>
+              <input type="checkbox" id="bi6" name="toolsNeedWork" value="VS Code"><label for="bi6">VS Code</label>
+              <input type="checkbox" id="bi7" name="toolsNeedWork" value="Antigravity IDE"><label for="bi7">Antigravity IDE</label>
+              <input type="checkbox" id="bi8" name="toolsNeedWork" value="Claude AI / Code"><label for="bi8">Claude AI / Code</label>
+              <input type="checkbox" id="bi9" name="toolsNeedWork" value="Cloud / warehouses"><label for="bi9">Cloud / warehouses</label>
+              <input type="checkbox" id="bi10" name="toolsNeedWork" value="Machine learning"><label for="bi10">Machine learning</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="q">The learning platform / environment was…</label>
+            <div class="scale" role="radiogroup" aria-label="Platform, 1 to 5">
+              <input type="radio" id="lm1" name="platform" value="1"><label for="lm1">1</label>
+              <input type="radio" id="lm2" name="platform" value="2"><label for="lm2">2</label>
+              <input type="radio" id="lm3" name="platform" value="3"><label for="lm3">3</label>
+              <input type="radio" id="lm4" name="platform" value="4"><label for="lm4">4</label>
+              <input type="radio" id="lm5" name="platform" value="5"><label for="lm5">5</label>
+            </div>
+            <div class="ends"><span>Frustrating</span><span>Seamless</span></div>
+          </div>
+        </section>
+
+        <!-- 05 — PROFESSIONAL SKILLS -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">05</span> Professional skills classes</div>
+            <div class="sec-title">Writing, presenting, profiling &amp; guest sessions</div>
+            <div class="sec-sub">The professional-development strand alongside the technical work.</div>
+          </div>
+
+          <div class="field">
+            <label class="q">Overall, how valuable were the professional skills classes?</label>
+            <div class="scale" role="radiogroup" aria-label="Professional classes value, 1 to 5">
+              <input type="radio" id="ps1" name="profValue" value="1"><label for="ps1">1</label>
+              <input type="radio" id="ps2" name="profValue" value="2"><label for="ps2">2</label>
+              <input type="radio" id="ps3" name="profValue" value="3"><label for="ps3">3</label>
+              <input type="radio" id="ps4" name="profValue" value="4"><label for="ps4">4</label>
+              <input type="radio" id="ps5" name="profValue" value="5"><label for="ps5">5</label>
+            </div>
+            <div class="ends"><span>Not valuable</span><span>Highly valuable</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Professional writing lessons</label>
+            <div class="scale" role="radiogroup" aria-label="Writing lessons, 1 to 5">
+              <input type="radio" id="pw1" name="profWriting" value="1"><label for="pw1">1</label>
+              <input type="radio" id="pw2" name="profWriting" value="2"><label for="pw2">2</label>
+              <input type="radio" id="pw3" name="profWriting" value="3"><label for="pw3">3</label>
+              <input type="radio" id="pw4" name="profWriting" value="4"><label for="pw4">4</label>
+              <input type="radio" id="pw5" name="profWriting" value="5"><label for="pw5">5</label>
+            </div>
+            <div class="ends"><span>Poor</span><span>Excellent</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Presentation skills sessions</label>
+            <div class="scale" role="radiogroup" aria-label="Presentations, 1 to 5">
+              <input type="radio" id="pp1" name="profPresentations" value="1"><label for="pp1">1</label>
+              <input type="radio" id="pp2" name="profPresentations" value="2"><label for="pp2">2</label>
+              <input type="radio" id="pp3" name="profPresentations" value="3"><label for="pp3">3</label>
+              <input type="radio" id="pp4" name="profPresentations" value="4"><label for="pp4">4</label>
+              <input type="radio" id="pp5" name="profPresentations" value="5"><label for="pp5">5</label>
+            </div>
+            <div class="ends"><span>Poor</span><span>Excellent</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Profiling sessions</label>
+            <div class="scale" role="radiogroup" aria-label="Profiling, 1 to 5">
+              <input type="radio" id="pr1" name="profProfiling" value="1"><label for="pr1">1</label>
+              <input type="radio" id="pr2" name="profProfiling" value="2"><label for="pr2">2</label>
+              <input type="radio" id="pr3" name="profProfiling" value="3"><label for="pr3">3</label>
+              <input type="radio" id="pr4" name="profProfiling" value="4"><label for="pr4">4</label>
+              <input type="radio" id="pr5" name="profProfiling" value="5"><label for="pr5">5</label>
+            </div>
+            <div class="ends"><span>Poor</span><span>Excellent</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">Guest speaker sessions</label>
+            <div class="scale" role="radiogroup" aria-label="Guest speakers, 1 to 5">
+              <input type="radio" id="pg1" name="profGuests" value="1"><label for="pg1">1</label>
+              <input type="radio" id="pg2" name="profGuests" value="2"><label for="pg2">2</label>
+              <input type="radio" id="pg3" name="profGuests" value="3"><label for="pg3">3</label>
+              <input type="radio" id="pg4" name="profGuests" value="4"><label for="pg4">4</label>
+              <input type="radio" id="pg5" name="profGuests" value="5"><label for="pg5">5</label>
+            </div>
+            <div class="ends"><span>Not useful</span><span>Very useful</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">The practical exercises were…</label>
+            <div class="seg" role="radiogroup" aria-label="Exercises frequency and value">
+              <input type="radio" id="pe1" name="profExercises" value="Too few"><label for="pe1">Too few</label>
+              <input type="radio" id="pe2" name="profExercises" value="A bit too few"><label for="pe2">A bit too few</label>
+              <input type="radio" id="pe3" name="profExercises" value="About right"><label for="pe3">About right</label>
+              <input type="radio" id="pe4" name="profExercises" value="A bit too many"><label for="pe4">A bit too many</label>
+              <input type="radio" id="pe5" name="profExercises" value="Too many"><label for="pe5">Too many</label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="q" for="profNotes">What would strengthen the professional skills classes?
+              <span class="hint" style="display:inline">(optional)</span></label>
+            <textarea id="profNotes" name="profNotes" placeholder="e.g. more mock presentations, different guest speakers, clearer writing rubrics…"></textarea>
+          </div>
+        </section>
+
+        <!-- 06 — PROSPECTS & READINESS -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">06</span> Prospects &amp; readiness</div>
+            <div class="sec-title">How prepared you feel for the field</div>
+          </div>
+
+          <div class="field">
+            <label class="q">I feel confident applying these skills to real analytical work.</label>
+            <div class="scale" role="radiogroup" aria-label="Confidence applying skills, 1 to 5">
+              <input type="radio" id="ca1" name="confidence" value="1"><label for="ca1">1</label>
+              <input type="radio" id="ca2" name="confidence" value="2"><label for="ca2">2</label>
+              <input type="radio" id="ca3" name="confidence" value="3"><label for="ca3">3</label>
+              <input type="radio" id="ca4" name="confidence" value="4"><label for="ca4">4</label>
+              <input type="radio" id="ca5" name="confidence" value="5"><label for="ca5">5</label>
+            </div>
+            <div class="ends"><span>Not confident</span><span>Very confident</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">The program prepared me well for what comes next in this field.</label>
+            <div class="scale" role="radiogroup" aria-label="Prepared for next steps, 1 to 5">
+              <input type="radio" id="pn1" name="prepared" value="1"><label for="pn1">1</label>
+              <input type="radio" id="pn2" name="prepared" value="2"><label for="pn2">2</label>
+              <input type="radio" id="pn3" name="prepared" value="3"><label for="pn3">3</label>
+              <input type="radio" id="pn4" name="prepared" value="4"><label for="pn4">4</label>
+              <input type="radio" id="pn5" name="prepared" value="5"><label for="pn5">5</label>
+            </div>
+            <div class="ends"><span>Not at all</span><span>Very well</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q">How ready do you feel to work independently as an analyst?</label>
+            <div class="seg" role="radiogroup" aria-label="Independent readiness">
+              <input type="radio" id="ir1" name="readiness" value="Not yet"><label for="ir1">Not yet</label>
+              <input type="radio" id="ir2" name="readiness" value="With close support"><label for="ir2">With close support</label>
+              <input type="radio" id="ir3" name="readiness" value="With occasional support"><label for="ir3">With occasional support</label>
+              <input type="radio" id="ir4" name="readiness" value="Mostly independent"><label for="ir4">Mostly independent</label>
+              <input type="radio" id="ir5" name="readiness" value="Fully independent"><label for="ir5">Fully independent</label>
+            </div>
+          </div>
+        </section>
+
+        <!-- 07 — OVERALL -->
+        <section class="section">
+          <div class="sec-head">
+            <div class="sec-kicker"><span class="n">07</span> Overall</div>
+            <div class="sec-title">One score and any closing thoughts</div>
+          </div>
+
+          <div class="field">
+            <label class="q">How likely are you to recommend this program to a future cohort? <span class="req">*</span></label>
+            <div class="nps" role="radiogroup" aria-label="Recommendation, 0 to 10">
+              <input type="radio" id="n0" name="nps" value="0"><label for="n0">0</label>
+              <input type="radio" id="n1" name="nps" value="1"><label for="n1">1</label>
+              <input type="radio" id="n2" name="nps" value="2"><label for="n2">2</label>
+              <input type="radio" id="n3" name="nps" value="3"><label for="n3">3</label>
+              <input type="radio" id="n4" name="nps" value="4"><label for="n4">4</label>
+              <input type="radio" id="n5" name="nps" value="5"><label for="n5">5</label>
+              <input type="radio" id="n6" name="nps" value="6"><label for="n6">6</label>
+              <input type="radio" id="n7" name="nps" value="7"><label for="n7">7</label>
+              <input type="radio" id="n8" name="nps" value="8"><label for="n8">8</label>
+              <input type="radio" id="n9" name="nps" value="9"><label for="n9">9</label>
+              <input type="radio" id="n10" name="nps" value="10"><label for="n10">10</label>
+            </div>
+            <div class="ends"><span>Not at all likely</span><span>Extremely likely</span></div>
+          </div>
+
+          <div class="field">
+            <label class="q" for="best">What worked best and should be preserved?</label>
+            <textarea id="best" name="best" placeholder="The parts of the program that should never change…"></textarea>
+          </div>
+
+          <div class="field">
+            <label class="q" for="improve">If you could change one thing about the program, what would it be?</label>
+            <textarea id="improve" name="improve" placeholder="The single most valuable improvement for the next cohort…"></textarea>
+          </div>
+
+          <div class="field">
+            <label class="q" for="message">Anything else for the program leads? <span class="hint" style="display:inline">(optional)</span></label>
+            <textarea id="message" name="message" placeholder="Open floor."></textarea>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="footer">
+        <button type="submit" class="submit">
+          Submit review
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <div class="err" id="err">Please add your name and a recommendation score before submitting.</div>
+        <div class="note">Submitted to the supervisors and program leads of Analysts of Arcadius (C4).</div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card thanks" id="thanksView">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+    </div>
+    <h2>Review submitted</h2>
+    <p>Thank you — your assessment has been recorded for the supervisors and program leads. Candid reviews like yours are exactly how the program improves for the next cohort.</p>
+    <div class="recap" id="recap"></div>
+  </div>
+
+</div>
+
+<script>
+  const form = document.getElementById('reviewForm');
+  const err = document.getElementById('err');
+
+  async function postReview(review) {
+    const response = await fetch('/api/submit', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(review)
+    });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Submission failed: ${response.status} ${body}`);
+    }
+    return response.json();
+  }
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const data = new FormData(form);
+    const name = (data.get('name') || '').trim();
+
+    if (!name || !data.get('nps')) {
+      err.textContent = 'Please add your name and a recommendation score before submitting.';
+      err.style.display = 'block';
+      const target = !name
+        ? document.getElementById('name')
+        : document.querySelector('[name=nps]');
+      target.closest('.field').scrollIntoView({behavior:'smooth', block:'center'});
+      if (!name) document.getElementById('name').focus();
+      return;
+    }
+    err.style.display = 'none';
+
+    const review = {
+      cohort: 'Analysts of Arcadius (C4)',
+      name: name,
+      email: (data.get('email') || '').trim() || null,
+      expectations: {
+        metExpectations: data.get('metExpectations'),
+        clearCommunication: data.get('clearComms'),
+        realityVsPromise: data.get('realityVsPromise') || null
+      },
+      curriculum: {
+        quality: data.get('curriculum'),
+        pace: data.get('pace') || null,
+        theoryPracticeBalance: data.get('balance') || null,
+        topicsNeedingDepth: data.getAll('needMoreDepth')
+      },
+      supervisors: {
+        expertise: data.get('supExpertise'),
+        guidanceClarity: data.get('guidance'),
+        responsiveness: data.get('responsiveness'),
+        feedbackQuality: data.get('feedbackQuality'),
+        professionalism: data.get('professionalism'),
+        keepDoing: data.get('supKeep') || null,
+        changeDoing: data.get('supChange') || null
+      },
+      tools: {
+        confidentWith: data.getAll('confidentTools'),
+        needBetterInstruction: data.getAll('toolsNeedWork'),
+        platform: data.get('platform')
+      },
+      professionalSkills: {
+        overallValue: data.get('profValue'),
+        writing: data.get('profWriting'),
+        presentations: data.get('profPresentations'),
+        profiling: data.get('profProfiling'),
+        guestSpeakers: data.get('profGuests'),
+        exercises: data.get('profExercises') || null,
+        notes: data.get('profNotes') || null
+      },
+      prospects: {
+        confidenceApplying: data.get('confidence'),
+        preparedForNext: data.get('prepared'),
+        independentReadiness: data.get('readiness') || null
+      },
+      overall: {
+        nps: Number(data.get('nps')),
+        whatWorked: data.get('best') || null,
+        oneChange: data.get('improve') || null,
+        messageToLeads: data.get('message') || null
+      },
+      submittedAt: new Date().toISOString()
+    };
+
+    try {
+      await postReview(review);
+    } catch (error) {
+      err.textContent = 'Submission failed. Please try again later.';
+      err.style.display = 'block';
+      console.error(error);
+      return;
+    }
+
+    const n = review.overall.nps;
+    const bucket = n >= 9 ? 'Promoter' : n >= 7 ? 'Passive' : 'Detractor';
+    document.getElementById('recap').innerHTML = `
+      <div class="row"><span>From</span><b>${review.name}</b></div>
+      <div class="row"><span>Recommendation</span><b>${n} / 10 · ${bucket}</b></div>
+      <div class="row"><span>Cohort</span><b>Analysts of Arcadius (C4)</b></div>
+      <div class="row"><span>Submitted</span><b>${new Date().toLocaleDateString()}</b></div>
+    `;
+    document.getElementById('formView').style.display = 'none';
+    document.getElementById('thanksView').style.display = 'block';
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+</script>
+</body>
+</html>
