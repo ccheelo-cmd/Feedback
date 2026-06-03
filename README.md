@@ -6,10 +6,20 @@ A styled feedback form for the **Analysts of Arcadius (C4)** program review, dep
 ## How it works
 
 - `index.html` — the feedback form, served as a static page at `/`.
-- `api/submit.js` — serverless function handling `POST /api/submit`; saves each review to Supabase.
+- `api/submit.js` — serverless function handling `POST /api/submit`; saves (or updates) a review in Supabase.
+- `api/lookup.js` — serverless function (`GET /api/lookup?name=`) returning a person's previous response so the form can pre-fill for editing.
 - `api/responses.js` — serverless function backing `/responses` (HTML) and `/responses.json` (raw data).
-- `lib/reviews.js` — shared Supabase logic used by both functions.
+- `lib/reviews.js` — shared Supabase logic used by the functions.
 - `vercel.json` — rewrites `/responses` and `/responses.json` to the responses function.
+
+## Editing responses
+
+Responses are keyed by **name** (case-insensitive). When someone enters a name that was used
+before, the form auto-fills with their previous answers and resubmitting **updates** that record
+instead of creating a duplicate. The thank-you screen also has an "Edit my response" button.
+
+> Because matching is by name, two different people who enter the same name would overwrite each
+> other — fine for a single cohort with distinct names.
 
 ## Routes
 

@@ -29,8 +29,8 @@ export default async function handler(req, res) {
     if (!isValidReview(review)) {
       return res.status(400).json({ error: 'Invalid submission payload.' });
     }
-    await saveReview(review);
-    return res.status(201).json({ success: true });
+    const { updated } = await saveReview(review);
+    return res.status(updated ? 200 : 201).json({ success: true, updated });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Failed to save submission.' });

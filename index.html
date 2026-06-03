@@ -216,6 +216,8 @@
     <form id="reviewForm" novalidate>
       <div class="body">
 
+        <div id="prefillBanner" role="status" style="display:none;margin:0 0 8px;padding:12px 16px;border-radius:12px;background:#e8f1ef;border:1px solid #b9dcd5;color:#0a5246;font-weight:600;font-size:.95rem;"></div>
+
         <!-- 00 — RESPONDENT -->
         <section class="section">
           <div class="sec-head">
@@ -654,9 +656,10 @@
     <div class="mark">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
     </div>
-    <h2>Review submitted</h2>
-    <p>Thank you — your assessment has been recorded for the supervisors and program leads. Candid reviews like yours are exactly how the program improves for the next cohort.</p>
+    <h2 id="thanksTitle">Review submitted</h2>
+    <p id="thanksMessage">Thank you — your assessment has been recorded for the supervisors and program leads. Candid reviews like yours are exactly how the program improves for the next cohort.</p>
     <div class="recap" id="recap"></div>
+    <button type="button" id="editBtn" class="submit" style="margin-top:22px;">Edit my response</button>
   </div>
 
 </div>
@@ -664,6 +667,96 @@
 <script>
   const form = document.getElementById('reviewForm');
   const err = document.getElementById('err');
+  const nameInput = document.getElementById('name');
+  const banner = document.getElementById('prefillBanner');
+  let lastLookup = '';
+
+  function setText(field, value) {
+    const el = form.querySelector(`[name="${field}"]`);
+    if (el) el.value = value == null ? '' : value;
+  }
+  function setRadio(field, value) {
+    form.querySelectorAll(`[name="${field}"]`).forEach(el => { el.checked = false; });
+    if (value == null || value === '') return;
+    const el = form.querySelector(`[name="${field}"][value="${CSS.escape(String(value))}"]`);
+    if (el) el.checked = true;
+  }
+  function setChecks(field, values) {
+    const set = new Set((values || []).map(String));
+    form.querySelectorAll(`[name="${field}"]`).forEach(el => { el.checked = set.has(el.value); });
+  }
+
+  // Populate every field from a previously stored review (reverse of the
+  // payload built on submit). Field names here must match the form inputs.
+  function fillForm(r) {
+    setText('name', r.name);
+    setText('email', r.email);
+    setRadio('metExpectations', r.expectations?.metExpectations);
+    setRadio('clearComms', r.expectations?.clearCommunication);
+    setRadio('realityVsPromise', r.expectations?.realityVsPromise);
+    setRadio('curriculum', r.curriculum?.quality);
+    setRadio('pace', r.curriculum?.pace);
+    setRadio('balance', r.curriculum?.theoryPracticeBalance);
+    setChecks('needMoreDepth', r.curriculum?.topicsNeedingDepth);
+    setRadio('supExpertise', r.supervisors?.expertise);
+    setRadio('guidance', r.supervisors?.guidanceClarity);
+    setRadio('responsiveness', r.supervisors?.responsiveness);
+    setRadio('feedbackQuality', r.supervisors?.feedbackQuality);
+    setRadio('professionalism', r.supervisors?.professionalism);
+    setText('supKeep', r.supervisors?.keepDoing);
+    setText('supChange', r.supervisors?.changeDoing);
+    setChecks('confidentTools', r.tools?.confidentWith);
+    setChecks('toolsNeedWork', r.tools?.needBetterInstruction);
+    setRadio('platform', r.tools?.platform);
+    setRadio('profValue', r.professionalSkills?.overallValue);
+    setRadio('profWriting', r.professionalSkills?.writing);
+    setRadio('profPresentations', r.professionalSkills?.presentations);
+    setRadio('profProfiling', r.professionalSkills?.profiling);
+    setRadio('profGuests', r.professionalSkills?.guestSpeakers);
+    setRadio('profExercises', r.professionalSkills?.exercises);
+    setText('profNotes', r.professionalSkills?.notes);
+    setRadio('confidence', r.prospects?.confidenceApplying);
+    setRadio('prepared', r.prospects?.preparedForNext);
+    setRadio('readiness', r.prospects?.independentReadiness);
+    setRadio('nps', r.overall?.nps);
+    setText('best', r.overall?.whatWorked);
+    setText('improve', r.overall?.oneChange);
+    setText('message', r.overall?.messageToLeads);
+  }
+
+  // When a name is entered, check for an existing response and pre-fill it.
+  async function lookupPrevious() {
+    const name = (nameInput.value || '').trim();
+    if (!name || name.toLowerCase() === lastLookup) return;
+    lastLookup = name.toLowerCase();
+    try {
+      const res = await fetch('/api/lookup?name=' + encodeURIComponent(name));
+      if (!res.ok) return;
+      const out = await res.json();
+      if (out.found && out.review) {
+        fillForm(out.review);
+        const when = out.review.submittedAt ? new Date(out.review.submittedAt).toLocaleDateString() : '';
+        banner.textContent = 'We found a previous response under "' + name + '"' +
+          (when ? ' from ' + when : '') +
+          '. Your answers are loaded below — edit anything and resubmit to update it.';
+        banner.style.display = 'block';
+      } else {
+        banner.style.display = 'none';
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  nameInput.addEventListener('change', lookupPrevious);
+  nameInput.addEventListener('blur', lookupPrevious);
+
+  // "Edit my response" on the thank-you screen returns to the (still-filled) form.
+  document.getElementById('editBtn').addEventListener('click', function () {
+    document.getElementById('thanksView').style.display = 'none';
+    document.getElementById('formView').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   async function postReview(review) {
     const response = await fetch('/api/submit', {
@@ -747,14 +840,21 @@
       submittedAt: new Date().toISOString()
     };
 
+    let result;
     try {
-      await postReview(review);
+      result = await postReview(review);
     } catch (error) {
       err.textContent = 'Submission failed. Please try again later.';
       err.style.display = 'block';
       console.error(error);
       return;
     }
+
+    const updated = Boolean(result && result.updated);
+    document.getElementById('thanksTitle').textContent = updated ? 'Response updated' : 'Review submitted';
+    document.getElementById('thanksMessage').textContent = updated
+      ? 'Your response has been updated — the supervisors and program leads will see your latest answers.'
+      : 'Thank you — your assessment has been recorded for the supervisors and program leads. Candid reviews like yours are exactly how the program improves for the next cohort.';
 
     const n = review.overall.nps;
     const bucket = n >= 9 ? 'Promoter' : n >= 7 ? 'Passive' : 'Detractor';
